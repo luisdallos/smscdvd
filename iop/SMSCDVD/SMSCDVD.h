@@ -64,7 +64,7 @@
 # include <sysclib.h>
 # include <sysmem.h>
 # include <thbase.h>
-# include "../SMSUTILS/smsutils.h"
+//# include "../SMSUTILS/smsutils.h"
 
 # define CDVD_IRX 0xB001337
 
@@ -77,6 +77,7 @@
 # define CDVD_GETSIZE    0x08
 # define CDVD_SETDVDV    0x09
 # define CDVD_DVDV       0x0A
+# define CDVD_SETSPEED   0x0B
 
 enum CDVD_getMode {
 

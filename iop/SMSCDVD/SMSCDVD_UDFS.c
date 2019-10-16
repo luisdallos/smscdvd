@@ -37,7 +37,7 @@
 #define UDF_GETN1( p ) (  ( unsigned char  )apData[ p ]  )
 #define UDF_GETN2( p ) (   ( unsigned short )apData[ p ] | (  ( unsigned short )apData[ ( p ) + 1 ] << 8  )   )
 #define UDF_GETN4( p ) (   ( unsigned int   )apData[ p ] | (  ( unsigned int   )apData[ ( p ) + 1 ] << 8  ) | (  ( unsigned int )apData[ ( p ) + 2 ] << 16  ) | (  ( unsigned int )apData[ ( p ) + 3 ] << 24  )   )
-#define UDF_GETN( p, n, target ) mips_memcpy ( target, &apData[ p ], n )
+#define UDF_GETN( p, n, target ) memcpy ( target, &apData[ p ], n )
 
 typedef struct UDFPartitionInfo {
 
@@ -414,8 +414,8 @@ static int UDFScanDir ( UDFAddress* apScanDir, char* apFileName, UDFAddress* apF
 
  if (  ReadDVDVSectors ( lScanLBA, 2, s_Buffer ) <= 0  ) return 0;
 
- mips_memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
- mips_memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+ memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
+ memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
 
  lScanPos = 0;
 
@@ -429,8 +429,8 @@ static int UDFScanDir ( UDFAddress* apScanDir, char* apFileName, UDFAddress* apF
 
    if (  ReadDVDVSectors ( lScanLBA, 2, s_Buffer ) <= 0  ) return 0;
 
-   mips_memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
-   mips_memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+   memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
+   memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
 
   }  /* end if */
 
@@ -546,8 +546,8 @@ static int UDF_DOpen ( iop_io_file_t* apFile, const char* apPath ) {
 
  ReadDVDVSectors ( s_ScanLBA++, 2, s_Buffer );
 
- mips_memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
- mips_memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+ memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
+ memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
 
  return 1;
 
@@ -569,8 +569,8 @@ static int UDF_DRead ( iop_io_file_t* apFile, void* apRetVal ) {
 
    if (  ReadDVDVSectors ( s_ScanLBA++, 2, s_Buffer ) <= 0  ) return 0;
 
-   mips_memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
-   mips_memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+   memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
+   memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
 
   }  /* end if */
 
@@ -673,7 +673,7 @@ static int UDF_Read ( iop_io_file_t* apFile, void* apBuff, int aSize ) {
   lfRead  =    1;
   lnExtra = 2064;
 
-  if ( s_LastBk > 0 ) mips_memcpy ( s_Buffer, s_Buffer + 2064 * s_LastBk, 2064 );
+  if ( s_LastBk > 0 ) memcpy ( s_Buffer, s_Buffer + 2064 * s_LastBk, 2064 );
 
   s_LastBk = 0;
 
@@ -699,7 +699,7 @@ static int UDF_Read ( iop_io_file_t* apFile, void* apBuff, int aSize ) {
 
  if (  ( int )lnSectors > aSize  ) lnSectors = aSize;
 
- mips_memcpy ( apBuff, s_Buffer + lOffSector, lnSectors );
+ memcpy ( apBuff, s_Buffer + lOffSector, lnSectors );
 
  i -= lnSectors;
 
@@ -713,13 +713,13 @@ static int UDF_Read ( iop_io_file_t* apFile, void* apBuff, int aSize ) {
 
   for (  i = 0; i < ( int )lnSectors; ++i  ) {
 
-   mips_memcpy ( apBuff, lpBuff + 12, 2048 );
+   memcpy ( apBuff, lpBuff + 12, 2048 );
    apBuff  = ( char* )apBuff + 2048;
    lpBuff += 2064;
 
   }  /* end for */
 
-  if ( lOffSector ) mips_memcpy ( apBuff, lpBuff + 12, lOffSector );
+  if ( lOffSector ) memcpy ( apBuff, lpBuff + 12, lOffSector );
 
  }  /* end if */
 

@@ -187,10 +187,10 @@ static int                s_FDUsed [ 16 ];
 static int                s_FilesOpen;
 static iop_io_device_t    file_driver;
 static dir_cache_info     CachedDirInfo;
-static cd_read_mode_t     s_CDReadMode;
+static sceCdRMode         s_CDReadMode;
 static unsigned int       s_LastSector;
 static unsigned int       s_LastBk;
-static cd_read_mode_t     s_DVDReadMode;
+static sceCdRMode         s_DVDReadMode;
 static int                s_DVDVSupport;
 static char               s_DirName[ 1024 ];
 static char               s_Buffer[ 9 * 2064 ];
@@ -225,51 +225,68 @@ static int FindPath       ( char*                           );
 static void* CDVD_rpc_server ( int, void*, int );
 static void  CDVD_Thread     ( void*           );
 
-static int ReadSect ( u32 aStartSector, u32 anSectors, void* apBuf, cd_read_mode_t* aMode ) {
+int isValidDisc(void)
+{
+    int result;
+
+    switch (sceCdGetDiskType()) {
+        case SCECdPSCD:
+        case SCECdPSCDDA:
+        case SCECdPS2CD:
+        case SCECdPS2CDDA:
+        case SCECdPS2DVD:
+            result = 1;
+            break;
+        default:
+            result = 0;
+    }
+
+    return result;
+}
+
+static int ReadSect ( u32 aStartSector, u32 anSectors, void* apBuf, sceCdRMode* aMode ) {
 
  int lRetry;
  int lResult = 0;
+ int lSpeed  = s_CDReadMode.spindlctrl;
 
  s_CDReadMode.trycount = 32;
 
- for ( lRetry=0; lRetry < 32; ++lRetry ) {
+ for ( lRetry = 0; lRetry < 32; ++lRetry ) {
 
-  if ( lRetry <= 8 )
+  if ( lRetry > 8 ) s_CDReadMode.spindlctrl = 2;
 
-   s_CDReadMode.spindlctrl = 1;
+  sceCdDiskReady ( 0 );
 
-  else s_CDReadMode.spindlctrl = 0;
-
-  CdDiskReady ( 0 );
-
-  if (  CdRead ( aStartSector, anSectors, apBuf, aMode ) != TRUE  ) {
+  if (  sceCdRead ( aStartSector, anSectors, apBuf, aMode ) != TRUE  ) {
 
    if ( lRetry == 31 ) {
 
-    mips_memset ( apBuf, 0, anSectors << 11 );
+    memset ( apBuf, 0, anSectors << 11 );
+    s_CDReadMode.spindlctrl = lSpeed;
     return FALSE;
 
    }  /* end if */
 
   } else {
 
-   CdSync ( 0 );
+   sceCdSync ( 0 );
    break;
 
   }  /* end else */
 
-  lResult = CdGetError ();
+  lResult = sceCdGetError ();
 
   if ( !lResult ) break;
 
  }  /* end for */
 
  s_CDReadMode.trycount   = 32;
- s_CDReadMode.spindlctrl =  1;
+ s_CDReadMode.spindlctrl = lSpeed;
 
  if ( !lResult ) return TRUE;
 
- mips_memset ( apBuf, 0, anSectors << 11 );
+ memset ( apBuf, 0, anSectors << 11 );
 
  return FALSE;
 
@@ -295,20 +312,15 @@ static int ReadDVDVSectors ( u32 aStartSector, u32 anSectors, void* apBuf ) {
 *************************************************************/
 int CDVD_init ( iop_io_device_t* apDriver ) {
 
- printf ( "CDVD: CDVD Filesystem v2.0\n"                             );
- printf ( "by A.Lee (aka Hiryu), Nicholas Van Veen (aka Sjeep)...\n" );
- printf ( "...and Eugene Plotnikov (aka EEUG)\n"                     );
- printf ( "CDVD: Initializing '%s' file driver.\n", apDriver -> name );
+ sceCdInit ( 1 );
 
- CdInit ( 1 );
-
- mips_memset (  s_FDTable, 0, sizeof ( s_FDTable )  );
- mips_memset (  s_FDUsed,  0, 16 * 4                );
+ memset (  s_FDTable, 0, sizeof ( s_FDTable )  );
+ memset (  s_FDUsed,  0, 16 * 4                );
 
  s_DVDVSupport             =  1;
  s_DVDReadMode.trycount    =  5;
  s_DVDReadMode.spindlctrl  = 11;
- s_DVDReadMode.datapattern = CdSecS2048;
+ s_DVDReadMode.datapattern = SCECdSecS2048;
  s_DVDReadMode.pad         = 0x00;
 
  return 0;
@@ -438,7 +450,7 @@ static int ISO_Read (  iop_io_file_t* apFile, void* buffer, int size ) {
 
   read = 1;
 
-  if ( s_LastBk > 0 ) mips_memcpy ( s_Buffer, s_Buffer + 2048 * s_LastBk, 2048 );
+  if ( s_LastBk > 0 ) memcpy ( s_Buffer, s_Buffer + 2048 * s_LastBk, 2048 );
 
   s_LastBk = 0;
 
@@ -457,7 +469,7 @@ static int ISO_Read (  iop_io_file_t* apFile, void* buffer, int size ) {
 
  }  // end if
 
- mips_memcpy ( buffer, s_Buffer + off_sector, size );
+ memcpy ( buffer, s_Buffer + off_sector, size );
 
  s_FDTable[ i ].m_FilePos += size;
 
@@ -508,7 +520,7 @@ void CDVD_GetVolumeDescriptor ( void ) {
 
    if ( localVolDesc.m_FSType == 1 ||
         localVolDesc.m_FSType == 2
-   ) mips_memcpy (  &CDVolDesc, &localVolDesc, sizeof ( cdVolDesc )  );
+   ) memcpy (  &CDVolDesc, &localVolDesc, sizeof ( cdVolDesc )  );
 
   } else break;
 
@@ -671,7 +683,7 @@ int CDVD_Cache_Dir ( const char* apPath, enum Cache_getMode aMode ) {
 
  }  /* end if */
 
- CdDiskReady ( 0 );
+ sceCdDiskReady ( 0 );
  CDVD_GetVolumeDescriptor ();
 
  CachedDirInfo.m_PathDepth     = 0;
@@ -706,7 +718,7 @@ static int FindPath ( char* pathname ) {
 
  lDirName = strtok ( pathname, "\\/" );
 
- CdDiskReady ( 0 );
+ sceCdDiskReady ( 0 );
 
  while ( lDirName ) {
 
@@ -840,7 +852,7 @@ static void* CDVDRpc_FlushCache ( void ) {
 
 static void* CDVDRpc_Stop ( void ) {
 
- CdStop ();
+ sceCdStop ();
 
  return NULL;
 
@@ -877,6 +889,8 @@ struct dirTocEntry* s_tocEntryPointer = NULL;
 static int          s_DirEntry;
 
 static int ISO_DOpen (  iop_io_file_t* apFile, const char* apName ) {
+
+  if (isValidDisc() == 0) return -ENOENT;
 
  if (  s_tocEntryPointer                                          ) return -ENFILE;
  if (  !CDVD_Cache_Dir ( apName,                   CACHE_START )  ) return -ENOENT;
@@ -1027,6 +1041,7 @@ void* CDVD_rpc_server ( int aFunc, void* apData, int aSize ) {
   case CDVD_FLUSHCACHE: return CDVDRpc_FlushCache ();
   case CDVD_SETDVDV   : return CDVDRpc_SetDVDV    (  ( unsigned int* )apData  );
   case CDVD_DVDV      : *(  ( unsigned int* )apData  ) = s_DVDVSupport; return apData;
+  case CDVD_SETSPEED  : s_CDReadMode.spindlctrl = *( unsigned int* )apData; return apData;
 
  }  /* end switch */
 
@@ -1076,7 +1091,7 @@ static void TocEntryCopy ( TocEntry* apTocEntry, dirTocEntry* apIntTocEntry ) {
 
  if( ( CDVolDesc.m_EscapeSeq[0] == 0x25 ) && ( CDVolDesc.m_EscapeSeq[1] == 0x2F ) ) {
 
-  // This is a Joliet Filesystem, so use Unicode to ISO string copy
+  //This is a Joliet Filesystem, so use Unicode to ISO string copy
   //The Joliet specification resolves the following ISO 9660 ambiguitie for UCS-2 volumes:
   //The UCS-2 escape sequences used are: (25)(2F)(40), (25)(2F)(43), or (25)(2F)(45).
 
@@ -1192,8 +1207,8 @@ int _start ( int argc, char** argv ) {
  if ( CachedDirInfo.cache == NULL ) CachedDirInfo.cache = ( char* )AllocSysMemory ( 0, MAX_DIR_CACHE_SECTORS * 2048, NULL );
 
  s_CDReadMode.trycount    = 0;
- s_CDReadMode.spindlctrl  = CdSpinStm;
- s_CDReadMode.datapattern = CdSecS2048;
+ s_CDReadMode.spindlctrl  = SCECdSpinStm;
+ s_CDReadMode.datapattern = SCECdSecS2048;
 
  file_driver.name    = "cdfs";
  file_driver.type    = 16;
