@@ -61,9 +61,12 @@
 #define CDVD_FLUSHCACHE 0x07
 #define CDVD_SET_DVDV   0x09
 #define CDVD_QUERY_DVDV 0x0A
+#define CDVD_SET_SPEED  0x0B
 
 static unsigned int       s_Buff[4] __attribute__((aligned(64)));
 static SifRpcClientData_t s_Client  __attribute__((aligned(64)));
+
+unsigned char             g_CDVDSpeed __attribute__((section(".data")));
 
 int CDVD_Init ( void )
 {
@@ -97,7 +100,7 @@ int CDVD_Init ( void )
 
 }  /* end CDVD_Init */
 
-void CDVD_Stop (void)
+void CDVD_Stop ( void )
 {
 
 	SifCallRpc ( &s_Client, CDVD_STOP, 0, NULL, 0, NULL, 0, 0, 0 );
@@ -130,3 +133,16 @@ int CDVD_QueryDVDV ( void )
 	return s_Buff[ 0 ];
 
 }  /* end CDVD_DVDV */
+
+int CDVD_SetSpeed ( void )
+{
+
+	static int sl_Speeds[ 3 ] = { 2, 0, 1 };
+
+	s_Buff[ 0 ] = sl_Speeds[ g_CDVDSpeed ];
+
+	SifCallRpc ( &s_Client, CDVD_SET_SPEED, 0, s_Buff, 4, s_Buff, 4, 0, 0 );
+
+	return s_Buff[ 0 ];
+
+}  /* end CDVD_SetSpeed */

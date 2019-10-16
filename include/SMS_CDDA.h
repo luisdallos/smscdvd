@@ -9,7 +9,7 @@
 #
 */
 #ifndef __SMS_CDDA_H
-# define __SMS_CDDA_H
+#define __SMS_CDDA_H
 
 typedef enum {
  DiskType_CD, DiskType_DVD, DiskType_CDDA, DiskType_DVDV, DiskType_Unknown, DiskType_Detect, DiskType_None
@@ -20,9 +20,9 @@ typedef enum {
  MediaMode_DVD = 2
 } MediaMode;
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-# endif  /* __cplusplus */
+#endif  /* __cplusplus */
 
 typedef struct CDDA_Duration {
 
@@ -60,10 +60,20 @@ typedef struct CDDA_TOC {
 
 } CDDA_TOC;
 
+typedef struct CDDA_RTC {
+ unsigned char m_Status;
+ unsigned char m_Second;
+ unsigned char m_Minute;
+ unsigned char m_Hour;
+ unsigned char m_Pad;
+ unsigned char m_Day;
+ unsigned char m_Month;
+ unsigned char m_Year;
+} CDDA_RTC;
+
 extern int g_CDDASpeed;
 
 int      CDDA_Init         ( void                     );
-void     CDDA_Exit         ( void                     );
 int      CDDA_ReadTOC      ( CDDA_TOC*                );
 int      CDDA_RawRead      ( int, int, unsigned char* );
 int      CDDA_Synchronize  ( void                     );
@@ -73,8 +83,9 @@ void     CDDA_Standby      ( void                     );
 void     CDDA_Pause        ( void                     );
 void     CDDA_DiskReady    ( void                     );
 int      CDDA_SetMediaMode ( MediaMode                );
+int      CDDA_ReadClock    ( void*                    );
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 }
-# endif  /* __cplusplus */
+#endif  /* __cplusplus */
 #endif  /* __SMS_CDDA_H */
