@@ -723,3 +723,27 @@ static int UDF_Read ( iop_io_file_t* apFile, void* apBuff, int aSize ) {
  return aSize;
 
 }  /* end UDF_Read */
+
+static int UDF_GetStat ( iop_io_file_t* apFile, const char* apName, void* apRetVal ) {
+
+ UDFAddress lFile;
+
+ fio_stat_t* stat = ( fio_stat_t* )apRetVal;
+
+ if (  !UDF_FindFile ( apName, &lFile )  ) return -ENOENT;
+
+ if ( lFile.m_Type == UDF_FILE_TYPE_DIRECTORY )
+
+  stat -> mode = FIO_SO_IFDIR;
+
+ else if ( lFile.m_Type == UDF_FILE_TYPE_FILE )
+
+  stat -> mode = FIO_SO_IFREG;
+
+ else return -ENOENT;
+
+ stat -> size = lFile.m_Length;
+
+ return 0;
+
+}  /* end UDF_GetStat */

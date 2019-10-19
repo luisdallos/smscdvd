@@ -206,6 +206,7 @@ static int ( *Func_Read   ) ( iop_io_file_t*, void*, int  );
 static int ( *Func_DOpen  ) ( iop_io_file_t*, const char* );
 static int ( *Func_DRead  ) ( iop_io_file_t*, void*       );
 static int ( *Func_DClose ) ( iop_io_file_t*              );
+static int ( *Func_GetStat ) ( iop_io_file_t*, const char*, void* );
 
 static int CDVD_init  ( iop_io_device_t*                      );
 static int CDVD_open  ( iop_io_file_t*, const char*, int, ... );
@@ -213,6 +214,7 @@ static int CDVD_lseek ( iop_io_file_t*, unsigned long, int    );
 static int CDVD_read  ( iop_io_file_t*, void*, int            );
 static int CDVD_write ( iop_io_file_t*, void*, int            );
 static int CDVD_close ( iop_io_file_t*                        );
+static int CDVD_getstat ( iop_io_file_t*, const char*, void*  );
 
 static int   CDVD_findfile      ( const char*, TocEntry* );
 static void* CDVDRpc_Stop       ( void                   );
@@ -369,7 +371,7 @@ static int ISO_Open ( iop_io_file_t* apFile, const char* name ) {
 
  int i;
 
- if (  CDVD_findfile ( name, &tocEntry ) != TRUE ) return -ENOENT;
+ if (  CDVD_findfile ( name, &tocEntry ) != TRUE || tocEntry.m_FileProperties & 0x02  ) return -ENOENT;
 
  i = _AllocFD ( tocEntry.m_FileLBA, tocEntry.m_FileSize );
 
@@ -507,6 +509,32 @@ int CDVD_close ( iop_io_file_t* apFile ) {
  return 0;
 
 }  /* end CDVD_close */
+
+static int ISO_GetStat ( iop_io_file_t* apFile, const char* apName, void* apRetVal ) {
+
+ static struct TocEntry tocEntry;
+
+ fio_stat_t* stat = ( fio_stat_t* )apRetVal;
+
+ if (  CDVD_findfile ( apName, &tocEntry ) != TRUE  ) return -ENOENT;
+
+ if ( tocEntry.m_FileProperties & 0x02 )
+
+  stat -> mode = FIO_SO_IFDIR;
+
+ else stat -> mode = FIO_SO_IFREG;
+
+ stat -> size = tocEntry.m_FileSize;
+
+ return 0;
+
+}  /* end ISO_GetStat */
+
+static int CDVD_getstat ( iop_io_file_t* apFile, const char* apName, void* apRetVal ) {
+
+ return Func_GetStat ( apFile, apName, apRetVal );
+
+}  /* end CDVD_getstat */
 /**************************************************************
 * The functions below are not exported for normal file-system *
 * operations, but are used by the file-system operations, and *
@@ -538,10 +566,17 @@ static int CDVD_findfile ( const char* fname, struct TocEntry* tocEntry ) {
 
  static char filename[  128 + 1 ];
  static char pathname[ 1024 + 1 ];
+ int flen;
 
  dirTocEntry* tocEntryPointer;
 
- _splitpath ( fname, pathname, filename );
+ strcpy ( s_DirName, fname );
+ 
+ flen = strlen ( s_DirName );
+ 
+ if (  s_DirName[ flen - 1 ] == '/' || s_DirName[ flen - 1 ] == '\\'  ) s_DirName[ flen - 1 ] = '\0';
+ 
+ _splitpath ( s_DirName, pathname, filename );
 
  if (  CachedDirInfo.m_Valid  && ComparePath ( pathname ) == MATCH  ) {
 
@@ -557,13 +592,9 @@ static int CDVD_findfile ( const char* fname, struct TocEntry* tocEntry ) {
 
    if (   ( char* )tocEntryPointer >= (  CachedDirInfo.cache + ( CachedDirInfo.m_CacheSize * 2048 )  )   ) break;
 
-   if (  !( tocEntryPointer -> m_FileProperties & 0x02 )  ) {
-
     TocEntryCopy ( tocEntry, tocEntryPointer );
 
     if (  strcasecmp ( tocEntry -> m_Filename, filename ) == 0  ) return TRUE;
-
-   }  /* end if */
 
   }  /* end for */
 
@@ -585,7 +616,7 @@ static int CDVD_findfile ( const char* fname, struct TocEntry* tocEntry ) {
 
   ( char* )tocEntryPointer = CachedDirInfo.cache;
 
-  if ( !CachedDirInfo.m_CacheOffset ) ( char* )tocEntryPointer += tocEntryPointer -> m_Length;
+  if (  !CachedDirInfo.m_CacheOffset && CachedDirInfo.m_PathDepth  ) ( char* )tocEntryPointer += tocEntryPointer -> m_Length;
 
   for (  ; ( char* )tocEntryPointer < (  CachedDirInfo.cache + ( CachedDirInfo.m_CacheSize * 2048 )  );
            ( char* )tocEntryPointer += tocEntryPointer -> m_Length
@@ -1024,6 +1055,7 @@ static void* CDVDRpc_SetDVDV ( unsigned int* afSet ) {
   Func_DOpen  = UDF_DOpen;
   Func_DRead  = UDF_DRead;
   Func_DClose = UDF_DClose;
+  Func_GetStat = UDF_GetStat;
 
  } else {
 
@@ -1032,6 +1064,7 @@ static void* CDVDRpc_SetDVDV ( unsigned int* afSet ) {
   Func_DOpen  = ISO_DOpen;
   Func_DRead  = ISO_DRead;
   Func_DClose = ISO_DClose;
+  Func_GetStat = ISO_GetStat;
 
   *afSet = 1;
 
@@ -1184,12 +1217,6 @@ static int CDVD_dummy_file ( iop_io_file_t* apFile, const char* apName ) {
  return -EACCES;
 
 }  /* end CDVD_dummy_file */
-
-static int CDVD_getstat ( iop_io_file_t* apFile, const char* apName, void* apRetVal ) {
-
- return -ENOTSUP;
-
-}  /* end CDVD_getstat */
 
 static int CDVD_chstat ( iop_io_file_t* apFile, const char* apName, void* apPtr, unsigned int aVal ) {
 
