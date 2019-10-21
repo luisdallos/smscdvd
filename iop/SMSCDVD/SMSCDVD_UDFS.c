@@ -583,13 +583,11 @@ static int UDF_DRead ( iop_io_file_t* apFile, void* apRetVal ) {
     &s_ScanBuf[ s_ScanPos ], &s_ScanFileChar, s_ScanTemp, &lFileICB
    );
 
-   if ( s_ScanTemp[ 0 ] ) {
-
     UDFAddress lFile;
 
     if (  !UDFMapICB ( &lFileICB, &lFile )  ) return -ENOENT;
 
-    strcpy ( lpBuf -> name, s_ScanTemp );
+    strcpy ( lpBuf -> name, ( s_ScanTemp[ 0 ] ) ? s_ScanTemp : ".." );
 
     if ( lFile.m_Type == UDF_FILE_TYPE_DIRECTORY )
 
@@ -602,8 +600,6 @@ static int UDF_DRead ( iop_io_file_t* apFile, void* apRetVal ) {
     else return -ENOENT;
 
     return 1;
-
-   }  /* end if */
 
   } else return -ENOENT;
 
