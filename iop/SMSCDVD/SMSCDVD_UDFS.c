@@ -73,6 +73,7 @@ static unsigned int     s_ScanLBA;
 static unsigned int     s_ScanLen;
 static unsigned int     s_ScanPos;
 static UDFAddress       s_ScanDir;
+static char             s_Buffer2[ 9 * 2064 ];
 
 static void UDFICB ( unsigned char* apData, unsigned char* apFileType, unsigned short* apFlags ) {
 
@@ -147,8 +148,8 @@ static int UDFLogVolume ( unsigned char* apData, char* apVolDesc ) {
 
 static int UDFFindPartition ( int aPartNr ) {
 
- unsigned char* lpLB     = &s_Buffer[        12 ];
- unsigned char* lpAnchor = &s_Buffer[ 2064 + 12 ];
+ unsigned char* lpLB     = &s_Buffer2[        12 ];
+ unsigned char* lpAnchor = &s_Buffer2[ 2064 + 12 ];
  unsigned int   lLBA;
  unsigned int   lMVDSLoc;
  unsigned int   lMVDSLen;
@@ -164,7 +165,7 @@ static int UDFFindPartition ( int aPartNr ) {
 
  while ( 1 ) {
 
-  if (  ReadDVDVSectors ( lLBA, 1, &s_Buffer[ 2064 ] )  )
+  if (  ReadDVDVSectors ( lLBA, 1, &s_Buffer2[ 2064 ] )  )
 
    UDFDescriptor ( lpAnchor, &lTagID );
 
@@ -207,7 +208,7 @@ static int UDFFindPartition ( int aPartNr ) {
 
   do {
 
-   if (  !ReadDVDVSectors ( lLBA++, 1, s_Buffer )  )
+   if (  !ReadDVDVSectors ( lLBA++, 1, s_Buffer2 )  )
 
     lTagID = 0;
 
@@ -352,7 +353,7 @@ static void UDFFileEntry ( unsigned char* apData, UDFAddress* apAddr ) {
 
 static int UDFMapICB ( UDFAddress* apICB, UDFAddress* apFile ) {
 
- unsigned char* lpLB = &s_Buffer[ 12 ];
+ unsigned char* lpLB = &s_Buffer2[ 12 ];
  unsigned int   lLBA;
  unsigned short lTagID;
 
@@ -360,7 +361,7 @@ static int UDFMapICB ( UDFAddress* apICB, UDFAddress* apFile ) {
 
  do {
 
-  if (  !ReadDVDVSectors ( lLBA++, 1, s_Buffer )  )
+  if (  !ReadDVDVSectors ( lLBA++, 1, s_Buffer2 )  )
 
    lTagID = 0;
 
@@ -412,10 +413,10 @@ static int UDFScanDir ( UDFAddress* apScanDir, char* apFileName, UDFAddress* apF
  unsigned short lScanTagID;
  unsigned char  lScanFileChar;
 
- if (  ReadDVDVSectors ( lScanLBA, 2, s_Buffer ) <= 0  ) return 0;
+ if (  ReadDVDVSectors ( lScanLBA, 2, s_Buffer2 ) <= 0  ) return 0;
 
- memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
- memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+ memcpy ( &s_ScanBuf[    0 ], &s_Buffer2[   12 ], 2048 );
+ memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer2[ 2076 ], 2048 );
 
  lScanPos = 0;
 
@@ -427,10 +428,10 @@ static int UDFScanDir ( UDFAddress* apScanDir, char* apFileName, UDFAddress* apF
    lScanPos -= 2048;
    lScanLen -= 2048;
 
-   if (  ReadDVDVSectors ( lScanLBA, 2, s_Buffer ) <= 0  ) return 0;
+   if (  ReadDVDVSectors ( lScanLBA, 2, s_Buffer2 ) <= 0  ) return 0;
 
-   memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
-   memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+   memcpy ( &s_ScanBuf[    0 ], &s_Buffer2[   12 ], 2048 );
+   memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer2[ 2076 ], 2048 );
 
   }  /* end if */
 
@@ -455,7 +456,7 @@ static int UDFScanDir ( UDFAddress* apScanDir, char* apFileName, UDFAddress* apF
 static int UDFInit ( void ) {
 
  int            retVal = 0;
- unsigned char* lpLB   = &s_Buffer[ 12 ];
+ unsigned char* lpLB   = &s_Buffer2[ 12 ];
  unsigned short lTagID;
 
  if (  UDFFindPartition ( 0 )  ) {
@@ -464,7 +465,7 @@ static int UDFInit ( void ) {
 
   do {
 
-   if (  !ReadDVDVSectors ( lLBA++, 1, s_Buffer )  )
+   if (  !ReadDVDVSectors ( lLBA++, 1, s_Buffer2 )  )
 
     lTagID = 0;
 
@@ -544,10 +545,10 @@ static int UDF_DOpen ( iop_io_file_t* apFile, const char* apPath ) {
  s_ScanLBA = s_PartInfo.m_Start + s_ScanDir.m_Location;
  s_ScanLen = s_ScanDir.m_Length;
 
- ReadDVDVSectors ( s_ScanLBA++, 2, s_Buffer );
+ ReadDVDVSectors ( s_ScanLBA++, 2, s_Buffer2 );
 
- memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
- memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+ memcpy ( &s_ScanBuf[    0 ], &s_Buffer2[   12 ], 2048 );
+ memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer2[ 2076 ], 2048 );
 
  return 1;
 
@@ -567,10 +568,10 @@ static int UDF_DRead ( iop_io_file_t* apFile, void* apRetVal ) {
    s_ScanPos -= 2048;
    s_ScanLen -= 2048;
 
-   if (  ReadDVDVSectors ( s_ScanLBA++, 2, s_Buffer ) <= 0  ) return 0;
+   if (  ReadDVDVSectors ( s_ScanLBA++, 2, s_Buffer2 ) <= 0  ) return 0;
 
-   memcpy ( &s_ScanBuf[    0 ], &s_Buffer[   12 ], 2048 );
-   memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer[ 2076 ], 2048 );
+   memcpy ( &s_ScanBuf[    0 ], &s_Buffer2[   12 ], 2048 );
+   memcpy ( &s_ScanBuf[ 2048 ], &s_Buffer2[ 2076 ], 2048 );
 
   }  /* end if */
 
