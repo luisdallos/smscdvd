@@ -96,7 +96,7 @@ static void UDFDecode ( unsigned char* apSrc, int aLen, char* apDst ) {
 
   ++p;
 
-  while ( p < aLen ) apDst[ i++ ] = apSrc[ p += 2 ];
+  while ( p < aLen ) { apDst[ i++ ] = apSrc[ p ]; p += 2; }
 
  } else while ( p < aLen ) apDst[ i++ ] = apSrc[ p++ ];
 
