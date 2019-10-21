@@ -86,8 +86,10 @@ sysclib_IMPORTS_start
  I_strrchr
  I_strtok
  I_tolower
+#ifndef USE_SMSUTILS
  I_memcpy
  I_memset
+#endif
 sysclib_IMPORTS_end
 
 sysmem_IMPORTS_start
@@ -101,7 +103,9 @@ thbase_IMPORTS_start
  I_StartThread
 thbase_IMPORTS_end
 
-//smsutils_IMPORTS_start
-// I_mips_memcpy
-// I_mips_memset
-//smsutils_IMPORTS_end
+#ifdef USE_SMSUTILS
+smsutils_IMPORTS_start
+ I_mips_memcpy
+ I_mips_memset
+smsutils_IMPORTS_end
+#endif

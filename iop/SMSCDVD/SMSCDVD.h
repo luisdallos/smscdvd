@@ -64,7 +64,6 @@
 # include <sysclib.h>
 # include <sysmem.h>
 # include <thbase.h>
-//# include "../SMSUTILS/smsutils.h"
 
 # define CDVD_IRX 0xB001337
 

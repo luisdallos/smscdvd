@@ -61,6 +61,8 @@
 # include <sysclib.h>
 # include <sysmem.h>
 # include <thbase.h>
-//# include "../SMSUTILS/smsutils.h"
+# ifdef USE_SMSUTILS
+#  include "../SMSUTILS/smsutils.h"
+# endif
 
 #endif  /* IOP_IRX_IMPORTS_H */

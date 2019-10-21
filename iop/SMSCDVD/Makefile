@@ -7,6 +7,11 @@ IOP_OBJS = SMSCDVD.o imports.o
 IOP_LDFLAGS = -s
 IOP_CFLAGS  += -I./ -Wall -Wsign-compare -fno-builtin -D_IOP
 
+USE_SMSUTILS=0
+ifeq ($(USE_SMSUTILS), 1)
+	IOP_CFLAGS += -DUSE_SMSUTILS
+endif
+
 all: $(IOP_BIN)
 
 clean:

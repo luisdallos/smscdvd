@@ -52,6 +52,12 @@
 */
 #include "SMSCDVD.h"
 
+#ifdef USE_SMSUTILS
+# include "../SMSUTILS/smsutils.h"
+# define memcpy mips_memcpy
+# define memset mips_memset
+#endif
+
 #define TRUE	1
 #define FALSE	0
 
