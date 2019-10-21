@@ -1013,9 +1013,11 @@ void CDVD_Thread ( void* param ) {
 
 static void* CDVDRpc_SetDVDV ( unsigned int* afSet ) {
 
- if ( *afSet ) {
+ if ( *afSet )
 
   *afSet = UDFInit ();
+
+ if ( *afSet ) {
 
   Func_Open   = UDF_Open;
   Func_Read   = UDF_Read;
